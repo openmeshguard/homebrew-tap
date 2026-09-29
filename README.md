@@ -36,8 +36,11 @@ and signature/checksum failures. It writes the formula only after all checks
 succeed. Review the formula diff and merge it to publish an update; never replace
 a published upstream archive or move its tag.
 
-The manual update workflow produces a reviewable pull request within this tap
-using its repository-scoped GitHub token. Run it with the exact newly published
+The manual update workflow pushes a review branch within this tap using its
+repository-scoped GitHub token and records the comparison / pull-request creation
+URL in the job summary. A maintainer opens and reviews the pull request, then
+merges it to publish the formula. The workflow needs only contents-write access;
+it does not create or approve pull requests. Run it with the exact newly published
 stable tag (including future M7 releases). No cross-repository token is needed;
 no formula is published while the upstream release is still a draft.
 

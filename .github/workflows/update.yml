@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -25,7 +24,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: python3 scripts/update.py "$RELEASE_TAG"
-      - name: Open update pull request
+      - name: Prepare review branch
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
@@ -42,6 +41,8 @@ jobs:
           git commit -m "Update OpenMeshGuard to $RELEASE_TAG"
           gh auth setup-git
           git push origin "$branch"
-          gh pr create --base main --head "$branch" \
-            --title "Update OpenMeshGuard to $RELEASE_TAG" \
-            --body 'Generated after exact-workflow Sigstore verification of the public release checksum file and all four archives. Review the pinned archive URLs and hashes before merging. Homebrew itself enforces SHA-256, not Sigstore.'
+          {
+            printf 'Verified OpenMeshGuard `%s`; prepared review branch `%s`.\n\n' "$RELEASE_TAG" "$branch"
+            printf '[Review changes and open a pull request](https://github.com/%s/compare/main...%s?expand=1)\n\n' "$GITHUB_REPOSITORY" "$branch"
+            printf 'A maintainer must open and review the pull request. This workflow does not create or approve pull requests. Homebrew enforces SHA-256 at installation; the generator verified Sigstore signatures.\n'
+          } >> "$GITHUB_STEP_SUMMARY"
