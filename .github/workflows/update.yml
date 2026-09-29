@@ -1,0 +1,47 @@
+name: Prepare formula update
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Already public stable release tag (vMAJOR.MINOR.PATCH)
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        with:
+          cosign-release: v3.1.3
+      - name: Verify release and generate formula
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: python3 scripts/update.py "$RELEASE_TAG"
+      - name: Open update pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        shell: bash
+        run: |
+          if git diff --quiet -- Formula/openmeshguard.rb; then
+            exit 0
+          fi
+          branch="update-$RELEASE_TAG-$GITHUB_RUN_ID"
+          git checkout -b "$branch"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Formula/openmeshguard.rb
+          git commit -m "Update OpenMeshGuard to $RELEASE_TAG"
+          gh auth setup-git
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" \
+            --title "Update OpenMeshGuard to $RELEASE_TAG" \
+            --body 'Generated after exact-workflow Sigstore verification of the public release checksum file and all four archives. Review the pinned archive URLs and hashes before merging. Homebrew itself enforces SHA-256, not Sigstore.'
